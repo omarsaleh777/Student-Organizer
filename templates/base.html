@@ -1,20 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Student Life Organizer{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <!-- Navigation -->
     <nav>
         <div class="container">
             <h1>📚 Student Life Organizer</h1>
             <ul>
-                <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-                <li><a href="{{ url_for('courses') }}" class="{% if request.endpoint == 'courses' %}active{% endif %}">Courses</a></li>
-                <li><a href="{{ url_for('tasks') }}" class="{% if request.endpoint == 'tasks' %}active{% endif %}">Tasks</a></li>
+                <li><a href="{{ url_for('dashboard') }}"
+                        class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                <li><a href="{{ url_for('courses') }}"
+                        class="{% if request.endpoint == 'courses' %}active{% endif %}">Courses</a></li>
+                <li><a href="{{ url_for('tasks') }}"
+                        class="{% if request.endpoint == 'tasks' %}active{% endif %}">Tasks</a></li>
+                {% if current_user.is_authenticated %}
+                <li style="margin-left: auto; color: #667eea; font-weight: 600;">👤 {{ current_user.username }}</li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% endif %}
             </ul>
         </div>
     </nav>
@@ -26,4 +35,5 @@
 
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

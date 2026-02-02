@@ -2,9 +2,39 @@
 Database models for Student Life Organizer
 """
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 
 db = SQLAlchemy()
+
+
+class User(UserMixin, db.Model):
+    """User model for authentication"""
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    
+    # Relationship: One user has many courses
+    courses = db.relationship('Course', backref='user', lazy=True, cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        """Hash and set the user's password"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Check if provided password matches hash"""
+        return check_password_hash(self.password_hash, password)
+    
+    def to_dict(self):
+        """Convert user to dictionary"""
+        return {
+            'id': self.id,
+            'username': self.username,
+            'course_count': len(self.courses)
+        }
 
 
 class Course(db.Model):
@@ -13,6 +43,7 @@ class Course(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     
     # Relationship: One course has many tasks (cascade delete)
     tasks = db.relationship('Task', backref='course', lazy=True, cascade='all, delete-orphan')
