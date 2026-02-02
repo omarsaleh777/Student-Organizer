@@ -4,9 +4,16 @@
 
 {% block content %}
 <div class="container">
-    <div class="page-header">
-        <h2>📊 Dashboard</h2>
-        <p>Your upcoming tasks and deadlines</p>
+    <div class="page-header"
+        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2>📊 Dashboard</h2>
+            <p>Your upcoming tasks and deadlines</p>
+        </div>
+        <a href="{{ url_for('test_notifications') }}" class="btn btn-secondary"
+            style="text-decoration: none; white-space: nowrap;">
+            📧 Test Email Notifications
+        </a>
     </div>
 
     <!-- Filter Bar -->
