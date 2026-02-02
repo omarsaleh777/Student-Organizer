@@ -49,17 +49,26 @@ def load_user(user_id):
 # ASYNC EMAIL HELPER
 # ============================================================================
 
-def send_async_email(flask_app, mail_instance, user_email, user_name, tasks):
-    """Send email in background thread to avoid blocking"""
+def send_async_email(flask_app, mail_instance, user_email, user_name, tasks_data):
+    """Send email in background thread to avoid blocking
+    
+    Args:
+        flask_app: Flask app instance
+        mail_instance: Flask-Mail instance
+        user_email: User's email address (string)
+        user_name: User's name (string)
+        tasks_data: List of task dictionaries with extracted data (NOT database objects)
+    """
     with flask_app.app_context():
         try:
             from notifications import send_notification_email_direct
-            send_notification_email_direct(mail_instance, user_email, user_name, tasks)
+            send_notification_email_direct(mail_instance, user_email, user_name, tasks_data)
             print(f"✓ Email sent successfully to {user_email}")
         except Exception as e:
             print(f"✗ Email sending failed: {str(e)}")
             import traceback
             traceback.print_exc()
+
 
 
 
@@ -239,15 +248,28 @@ def test_notifications():
             flash('No tasks due tomorrow. Create a task with tomorrow\'s date to test email!', 'error')
             return redirect(url_for('dashboard'))
         
+        # CRITICAL: Extract all data from database objects BEFORE threading
+        # This prevents "detached instance" errors when the session closes
+        tasks_data = []
+        for task in tasks_due_tomorrow:
+            tasks_data.append({
+                'title': task.title,
+                'description': task.description or '',
+                'priority': task.priority,
+                'task_type': task.task_type,
+                'course_name': task.course.name,
+                'due_date': str(task.due_date)
+            })
+        
         # Send email in background thread (non-blocking)
-        print(f"DEBUG: Sending email for {len(tasks_due_tomorrow)} task(s) in background thread...")
+        print(f"DEBUG: Sending email for {len(tasks_data)} task(s) in background thread...")
         thr = Thread(
             target=send_async_email,
-            args=[app, mail, current_user.email, current_user.username, tasks_due_tomorrow]
+            args=[app, mail, current_user.email, current_user.username, tasks_data]
         )
         thr.start()
         
-        flash(f'Email notification sent in background for {len(tasks_due_tomorrow)} task(s)! Check your email.', 'success')
+        flash(f'Email notification sent in background for {len(tasks_data)} task(s)! Check your email.', 'success')
         return redirect(url_for('dashboard'))
     except Exception as e:
         error_msg = f'Error sending test notification: {str(e)}'

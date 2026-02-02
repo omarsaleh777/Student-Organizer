@@ -191,12 +191,18 @@ def send_notification_email(mail, user, tasks):
         return False
 
 
-def send_notification_email_direct(mail, user_email, user_name, tasks):
+def send_notification_email_direct(mail, user_email, user_name, tasks_data):
     """
     Send email notification directly with email and name (for threading)
+    
+    Args:
+        mail: Flask-Mail instance
+        user_email: User's email address
+        user_name: User's username
+        tasks_data: List of task dictionaries (NOT database objects)
     """
     # Create email content
-    subject = f"📚 Task Reminder: {len(tasks)} task{'s' if len(tasks) > 1 else ''} due tomorrow!"
+    subject = f"📚 Task Reminder: {len(tasks_data)} task{'s' if len(tasks_data) > 1 else ''} due tomorrow!"
     
     # HTML email template
     html_body = f"""
@@ -293,18 +299,18 @@ def send_notification_email_direct(mail, user_email, user_name, tasks):
         </div>
         <div class="content">
             <p>Hi {user_name},</p>
-            <p>You have <strong>{len(tasks)} task{'s' if len(tasks) > 1 else ''}</strong> due <strong>tomorrow</strong>:</p>
+            <p>You have <strong>{len(tasks_data)} task{'s' if len(tasks_data) > 1 else ''}</strong> due <strong>tomorrow</strong>:</p>
             
             {''.join([f'''
-            <div class="task {task.priority}">
-                <div class="task-title">{task.title}</div>
+            <div class="task {task['priority']}">
+                <div class="task-title">{task['title']}</div>
                 <div class="task-meta">
-                    <span class="priority {task.priority}">{task.priority.upper()}</span>
-                    <strong>{task.course.name}</strong> • {task.task_type.title()}
+                    <span class="priority {task['priority']}">{task['priority'].upper()}</span>
+                    <strong>{task['course_name']}</strong> • {task['task_type'].title()}
                 </div>
-                {f'<p style="margin-top: 8px; color: #666;">{task.description}</p>' if task.description else ''}
+                {f'<p style="margin-top: 8px; color: #666;">{task["description"]}</p>' if task['description'] else ''}
             </div>
-            ''' for task in tasks])}
+            ''' for task in tasks_data])}
             
             <div style="text-align: center;">
                 <a href="http://127.0.0.1:5000" class="button">View Dashboard</a>
@@ -324,9 +330,9 @@ def send_notification_email_direct(mail, user_email, user_name, tasks):
     
     Hi {user_name},
     
-    You have {len(tasks)} task{'s' if len(tasks) > 1 else ''} due tomorrow:
+    You have {len(tasks_data)} task{'s' if len(tasks_data) > 1 else ''} due tomorrow:
     
-    {''.join([f'• {task.title} ({task.priority.upper()}) - {task.course.name}\\n' for task in tasks])}
+    {''.join([f'• {task["title"]} ({task["priority"].upper()}) - {task["course_name"]}\\n' for task in tasks_data])}
     
     Visit http://127.0.0.1:5000 to view your dashboard.
     
@@ -349,4 +355,5 @@ def send_notification_email_direct(mail, user_email, user_name, tasks):
     except Exception as e:
         print(f"Error sending email to {user_email}: {str(e)}")
         return False
+
 
