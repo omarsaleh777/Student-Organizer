@@ -5,6 +5,7 @@ A simple web app for university students to organize courses and tasks
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail
+from threading import Thread
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -42,6 +43,24 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+# ============================================================================
+# ASYNC EMAIL HELPER
+# ============================================================================
+
+def send_async_email(app, mail_instance, user, tasks):
+    """Send email in background thread to avoid blocking"""
+    with app.app_context():
+        try:
+            from notifications import send_notification_email
+            send_notification_email(mail_instance, user, tasks)
+            print(f"✓ Email sent successfully to {user.email}")
+        except Exception as e:
+            print(f"✗ Email sending failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
 
 
 # ============================================================================
@@ -205,11 +224,29 @@ def test_notifications():
             flash('Email not configured. Please set up environment variables on Render.', 'error')
             return redirect(url_for('dashboard'))
         
-        # Send test notification
-        print("DEBUG: Attempting to send notifications...")
-        check_and_send_notifications(mail)
-        print("DEBUG: Notifications sent successfully!")
-        flash('Email notification test completed! Check your email and Render logs for results.', 'success')
+        # Get tasks due tomorrow for current user
+        from datetime import date, timedelta
+        tomorrow = date.today() + timedelta(days=1)
+        
+        tasks_due_tomorrow = Task.query.join(Course).filter(
+            Course.user_id == current_user.id,
+            Task.due_date == tomorrow,
+            Task.status != 'completed'
+        ).order_by(Task.priority.desc()).all()
+        
+        if not tasks_due_tomorrow:
+            flash('No tasks due tomorrow. Create a task with tomorrow\'s date to test email!', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Send email in background thread (non-blocking)
+        print(f"DEBUG: Sending email for {len(tasks_due_tomorrow)} task(s) in background thread...")
+        thr = Thread(
+            target=send_async_email,
+            args=[app._get_current_object(), mail, current_user, tasks_due_tomorrow]
+        )
+        thr.start()
+        
+        flash(f'Email notification sent in background for {len(tasks_due_tomorrow)} task(s)! Check your email.', 'success')
         return redirect(url_for('dashboard'))
     except Exception as e:
         error_msg = f'Error sending test notification: {str(e)}'
