@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Courses - Student Life Organizer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>📚 Courses</h2>
+        <p>Manage your courses</p>
+    </div>
+
+    <!-- Add Course Form -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Add New Course</h3>
+        <form method="POST" action="{{ url_for('add_course') }}">
+            <div class="form-group">
+                <label for="name">Course Name</label>
+                <input type="text" id="name" name="name" placeholder="e.g., Data Structures" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Course</button>
+        </form>
+    </div>
+
+    <!-- Courses List -->
+    <h3 style="color: white; margin: 2rem 0 1rem;">Your Courses</h3>
+
+    {% if courses %}
+    <div class="grid grid-2">
+        {% for course in courses %}
+        <div class="card course-card">
+            <div class="course-info">
+                <h3>{{ course.name }}</h3>
+                <p>{{ course.tasks|length }} task(s)</p>
+            </div>
+            <button onclick="deleteCourse({{ course.id }}, '{{ course.name }}')" class="btn btn-danger btn-small">
+                Delete
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h3>No courses yet!</h3>
+        <p>Add your first course to get started.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function deleteCourse(courseId, courseName) {
+        // Warning about cascade delete
+        const confirmed = confirm(
+            `Are you sure you want to delete "${courseName}"?\n\n` +
+            `⚠️ WARNING: This will also delete all tasks associated with this course!`
+        );
+
+        if (!confirmed) return;
+
+        fetch(`/courses/${courseId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete course');
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Student Life Organizer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>📊 Dashboard</h2>
+        <p>Your upcoming tasks and deadlines</p>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <label for="taskTypeFilter">Filter by type:</label>
+        <select id="taskTypeFilter">
+            <option value="all">All Tasks</option>
+            <option value="assignment">Assignments</option>
+            <option value="quiz">Quizzes</option>
+            <option value="exam">Exams</option>
+        </select>
+    </div>
+
+    <!-- Tasks List -->
+    <div id="tasksList">
+        {% if tasks %}
+        {% for task in tasks %}
+        <div class="card task-card {{ task.urgency_level() }}" data-task-type="{{ task.task_type }}">
+            <div class="task-header">
+                <div>
+                    <h3 class="task-title">{{ task.title }}</h3>
+                    <div class="task-meta">
+                        <span class="badge badge-type">{{ task.task_type|capitalize }}</span>
+                        <span class="badge badge-status">{{ task.status|replace('_', ' ')|capitalize }}</span>
+                        <span class="badge badge-priority {{ task.priority }}">{{ task.priority|capitalize }}
+                            Priority</span>
+                        <span class="badge">{{ task.course.name }}</span>
+                    </div>
+                    {% if task.description %}
+                    <p style="color: #666; margin-top: 0.5rem;">{{ task.description }}</p>
+                    {% endif %}
+                    <p style="color: #888; font-size: 0.9rem; margin-top: 0.5rem;">
+                        📅 Due: {{ task.due_date.strftime('%B %d, %Y') }}
+                    </p>
+                </div>
+                <div class="days-remaining {{ task.urgency_level() }}">
+                    {% if task.days_remaining() < 0 %} {{ task.days_remaining()|abs }} <div class="days-label">days
+                        overdue</div>
+                {% elif task.days_remaining() == 0 %}
+                Today
+                <div class="days-label">due today!</div>
+                {% else %}
+                {{ task.days_remaining() }}
+                <div class="days-label">days left</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <select onchange="updateTaskStatus({{ task.id }}, this.value)" class="btn-small" style="width: auto;">
+                <option value="">Change Status</option>
+                <option value="pending" {% if task.status=='pending' %}selected{% endif %}>Pending</option>
+                <option value="in-progress" {% if task.status=='in-progress' %}selected{% endif %}>In Progress</option>
+                <option value="completed" {% if task.status=='completed' %}selected{% endif %}>Completed</option>
+            </select>
+            <select onchange="updateTaskPriority({{ task.id }}, this.value)" class="btn-small" style="width: auto;">
+                <option value="">Change Priority</option>
+                <option value="low" {% if task.priority=='low' %}selected{% endif %}>Low</option>
+                <option value="medium" {% if task.priority=='medium' %}selected{% endif %}>Medium</option>
+                <option value="high" {% if task.priority=='high' %}selected{% endif %}>High</option>
+            </select>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <h3>No tasks yet!</h3>
+        <p>Add your first task to get started.</p>
+        <a href="{{ url_for('tasks') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Task</a>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Frontend-only filtering by task type
+    document.getElementById('taskTypeFilter').addEventListener('change', function () {
+        const filterValue = this.value;
+        const taskCards = document.querySelectorAll('.task-card');
+
+        taskCards.forEach(card => {
+            if (filterValue === 'all' || card.dataset.taskType === filterValue) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // Update task status
+    function updateTaskStatus(taskId, status) {
+        if (!status) return;
+
+        fetch(`/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: status })
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update task status');
+            });
+    }
+
+    // Update task priority
+    function updateTaskPriority(taskId, priority) {
+        if (!priority) return;
+
+        fetch(`/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ priority: priority })
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update task priority');
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks - Student Life Organizer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>✅ Tasks</h2>
+        <p>Manage your assignments, quizzes, and exams</p>
+    </div>
+
+    <!-- Add Task Form -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Add New Task</h3>
+        <form method="POST" action="{{ url_for('add_task') }}">
+            <div class="form-group">
+                <label for="title">Task Title</label>
+                <input type="text" id="title" name="title" placeholder="e.g., Binary Tree Assignment" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description (optional)</label>
+                <textarea id="description" name="description" placeholder="Add details about this task..."></textarea>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="due_date">Due Date</label>
+                    <input type="date" id="due_date" name="due_date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="course_id">Course</label>
+                    <select id="course_id" name="course_id" required>
+                        <option value="">Select a course</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="task_type">Task Type</label>
+                    <select id="task_type" name="task_type" required>
+                        <option value="assignment">Assignment</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="exam">Exam</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority" required>
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status" required>
+                    <option value="pending" selected>Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Task</button>
+        </form>
+    </div>
+
+    <!-- Tasks List -->
+    <h3 style="color: white; margin: 2rem 0 1rem;">Your Tasks</h3>
+
+    {% if tasks %}
+    {% set tasks_by_course = {} %}
+    {% for task in tasks %}
+    {% set course_name = task.course.name %}
+    {% if course_name not in tasks_by_course %}
+    {% set _ = tasks_by_course.update({course_name: []}) %}
+    {% endif %}
+    {% set _ = tasks_by_course[course_name].append(task) %}
+    {% endfor %}
+
+    {% for course_name, course_tasks in tasks_by_course.items() %}
+    <div style="margin-bottom: 2rem;">
+        <h4 style="color: white; margin-bottom: 1rem;">📚 {{ course_name }}</h4>
+        {% for task in course_tasks %}
+        <div class="card task-card {{ task.urgency_level() }}">
+            <div class="task-header">
+                <div style="flex: 1;">
+                    <h3 class="task-title">{{ task.title }}</h3>
+                    <div class="task-meta">
+                        <span class="badge badge-type">{{ task.task_type|capitalize }}</span>
+                        <span class="badge badge-status">{{ task.status|replace('_', ' ')|capitalize }}</span>
+                        <span class="badge badge-priority {{ task.priority }}">{{ task.priority|capitalize }}</span>
+                    </div>
+                    {% if task.description %}
+                    <p style="color: #666; margin-top: 0.5rem;">{{ task.description }}</p>
+                    {% endif %}
+                    <p style="color: #888; font-size: 0.9rem; margin-top: 0.5rem;">
+                        📅 Due: {{ task.due_date.strftime('%B %d, %Y') }}
+                    </p>
+                </div>
+                <div class="days-remaining {{ task.urgency_level() }}">
+                    {% if task.days_remaining() < 0 %} {{ task.days_remaining()|abs }} <div class="days-label">days
+                        overdue</div>
+                {% elif task.days_remaining() == 0 %}
+                Today
+                <div class="days-label">due today!</div>
+                {% else %}
+                {{ task.days_remaining() }}
+                <div class="days-label">days left</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <button onclick="deleteTask({{ task.id }}, '{{ task.title }}')" class="btn btn-danger btn-small">
+                Delete Task
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <h3>No tasks yet!</h3>
+    <p>Add your first task to get started.</p>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set minimum date to today
+    document.getElementById('due_date').min = new Date().toISOString().split('T')[0];
+
+    function deleteTask(taskId, taskTitle) {
+        const confirmed = confirm(`Are you sure you want to delete "${taskTitle}"?`);
+
+        if (!confirmed) return;
+
+        fetch(`/tasks/${taskId}`, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete task');
+            });
+    }
+</script>
+{% endblock %}
