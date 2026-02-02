@@ -53,3 +53,7 @@ output.txt
 
 # Logs
 *.log
+
+# Environment variables
+.env
+.env.local

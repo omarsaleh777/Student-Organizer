@@ -4,22 +4,52 @@ A simple web app for university students to organize courses and tasks
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail
+from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
+import os
+from dotenv import load_dotenv
 from models import db, User, Course, Task
 from database import init_db
+from notifications import check_and_send_notifications
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///student_organizer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 
+# Email configuration
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@studentorganizer.com')
+
 # Initialize database
 init_db(app)
+
+# Initialize Flask-Mail
+mail = Mail(app)
 
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Initialize scheduler for daily notifications
+scheduler = BackgroundScheduler()
+scheduler.add_job(
+    func=lambda: check_and_send_notifications(mail),
+    trigger='cron',
+    hour=9,  # Run at 9:00 AM daily
+    minute=0,
+    id='daily_notification_check'
+)
+scheduler.start()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -38,10 +68,11 @@ def register():
     
     if request.method == 'POST':
         username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         
-        if not username or not password:
-            flash('Username and password are required', 'error')
+        if not username or not email or not password:
+            flash('All fields are required', 'error')
             return render_template('register.html')
         
         # Check if user already exists
@@ -49,8 +80,13 @@ def register():
             flash('Username already exists', 'error')
             return render_template('register.html')
         
+        # Check if email already exists
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered', 'error')
+            return render_template('register.html')
+        
         # Create new user
-        user = User(username=username)
+        user = User(username=username, email=email)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
