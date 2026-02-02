@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Student Life Organizer{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 2rem;">
+    <h2 style="margin-bottom: 2rem; color: #667eea;">👤 My Profile</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}"
+        style="padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background: {% if category == 'error' %}#fee2e2; color: #991b1b{% else %}#d1fae5; color: #065f46{% endif %};">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Profile Information -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: #333;">📋 Account Information</h3>
+        <div style="display: grid; gap: 1rem;">
+            <div
+                style="display: flex; justify-content: space-between; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                <div>
+                    <strong style="color: #666;">Username:</strong>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 16px;">{{ user.username }}</p>
+                </div>
+            </div>
+
+            <div
+                style="display: flex; justify-content: space-between; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                <div>
+                    <strong style="color: #666;">Email:</strong>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 16px;">{{ user.email }}</p>
+                </div>
+            </div>
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                <div>
+                    <strong style="color: #666;">Email Notifications:</strong>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 16px;">
+                        {% if user.email_notifications_enabled %}
+                        <span style="color: #10b981;">✓ Enabled</span>
+                        {% else %}
+                        <span style="color: #ef4444;">✗ Disabled</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <form method="POST" action="{{ url_for('edit_profile') }}" style="margin: 0;">
+                    <input type="hidden" name="action" value="toggle_notifications">
+                    <button type="submit" class="btn btn-secondary btn-small">
+                        {% if user.email_notifications_enabled %}Disable{% else %}Enable{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Email -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: #333;">📧 Change Email</h3>
+        <form method="POST" action="{{ url_for('edit_profile') }}">
+            <input type="hidden" name="action" value="change_email">
+            <div class="form-group">
+                <label for="email">New Email Address</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Email</button>
+        </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: #333;">🔒 Change Password</h3>
+        <form method="POST" action="{{ url_for('edit_profile') }}">
+            <input type="hidden" name="action" value="change_password">
+            <div class="form-group">
+                <label for="current_password">Current Password</label>
+                <input type="password" id="current_password" name="current_password" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password">New Password</label>
+                <input type="password" id="new_password" name="new_password" required minlength="6">
+                <small style="color: #666;">Minimum 6 characters</small>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required minlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary">Change Password</button>
+        </form>
+    </div>
+
+    <!-- Account Stats -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.5rem; color: #333;">📊 Account Statistics</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div style="text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: bold; color: #667eea;">{{ user.courses|length }}</div>
+                <div style="color: #666; margin-top: 0.5rem;">Courses</div>
+            </div>
+            <div style="text-align: center; padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: bold; color: #10b981;">
+                    {% set total_tasks = namespace(count=0) %}
+                    {% for course in user.courses %}
+                    {% set total_tasks.count = total_tasks.count + course.tasks|length %}
+                    {% endfor %}
+                    {{ total_tasks.count }}
+                </div>
+                <div style="color: #666; margin-top: 0.5rem;">Total Tasks</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid #ef4444;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-left: 4px solid #10b981;
+    }
+</style>
+{% endblock %}

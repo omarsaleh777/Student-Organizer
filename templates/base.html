@@ -21,6 +21,8 @@
                 <li><a href="{{ url_for('tasks') }}"
                         class="{% if request.endpoint == 'tasks' %}active{% endif %}">Tasks</a></li>
                 {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('profile') }}"
+                        class="{% if request.endpoint == 'profile' %}active{% endif %}">Profile</a></li>
                 <li style="margin-left: auto; color: #667eea; font-weight: 600;">👤 {{ current_user.username }}</li>
                 <li><a href="{{ url_for('logout') }}">Logout</a></li>
                 {% endif %}

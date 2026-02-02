@@ -5,7 +5,6 @@ A simple web app for university students to organize courses and tasks
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail
-from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -39,17 +38,6 @@ mail = Mail(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-# Initialize scheduler for daily notifications
-scheduler = BackgroundScheduler()
-scheduler.add_job(
-    func=lambda: check_and_send_notifications(mail),
-    trigger='cron',
-    hour=9,  # Run at 9:00 AM daily
-    minute=0,
-    id='daily_notification_check'
-)
-scheduler.start()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -125,6 +113,76 @@ def logout():
     logout_user()
     flash('You have been logged out', 'success')
     return redirect(url_for('login'))
+
+
+@app.route('/profile')
+@login_required
+def profile():
+    """User profile page"""
+    return render_template('profile.html', user=current_user)
+
+
+@app.route('/profile/edit', methods=['POST'])
+@login_required
+def edit_profile():
+    """Edit user profile"""
+    try:
+        action = request.form.get('action')
+        
+        if action == 'change_email':
+            new_email = request.form.get('email')
+            
+            if not new_email:
+                flash('Email is required', 'error')
+                return redirect(url_for('profile'))
+            
+            # Check if email already exists
+            existing_user = User.query.filter_by(email=new_email).first()
+            if existing_user and existing_user.id != current_user.id:
+                flash('Email already in use', 'error')
+                return redirect(url_for('profile'))
+            
+            current_user.email = new_email
+            db.session.commit()
+            flash('Email updated successfully', 'success')
+        
+        elif action == 'change_password':
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+            
+            if not all([current_password, new_password, confirm_password]):
+                flash('All password fields are required', 'error')
+                return redirect(url_for('profile'))
+            
+            if not current_user.check_password(current_password):
+                flash('Current password is incorrect', 'error')
+                return redirect(url_for('profile'))
+            
+            if new_password != confirm_password:
+                flash('New passwords do not match', 'error')
+                return redirect(url_for('profile'))
+            
+            if len(new_password) < 6:
+                flash('Password must be at least 6 characters', 'error')
+                return redirect(url_for('profile'))
+            
+            current_user.set_password(new_password)
+            db.session.commit()
+            flash('Password changed successfully', 'success')
+        
+        elif action == 'toggle_notifications':
+            current_user.email_notifications_enabled = not current_user.email_notifications_enabled
+            db.session.commit()
+            status = 'enabled' if current_user.email_notifications_enabled else 'disabled'
+            flash(f'Email notifications {status}', 'success')
+        
+        return redirect(url_for('profile'))
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating profile: {str(e)}', 'error')
+        return redirect(url_for('profile'))
 
 
 # ============================================================================
