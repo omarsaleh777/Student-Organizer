@@ -191,17 +191,34 @@ def test_notifications():
     """Test email notifications manually"""
     try:
         # Check if email is configured
-        if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
-            flash('Email not configured. Please set up your .env file with MAIL_USERNAME and MAIL_PASSWORD', 'error')
+        mail_username = app.config.get('MAIL_USERNAME', '')
+        mail_password = app.config.get('MAIL_PASSWORD', '')
+        
+        print(f"DEBUG: MAIL_USERNAME configured: {bool(mail_username)}")
+        print(f"DEBUG: MAIL_PASSWORD configured: {bool(mail_password)}")
+        print(f"DEBUG: MAIL_SERVER: {app.config.get('MAIL_SERVER')}")
+        print(f"DEBUG: MAIL_PORT: {app.config.get('MAIL_PORT')}")
+        
+        if not mail_username or not mail_password:
+            error_msg = f"Email not configured. MAIL_USERNAME: {bool(mail_username)}, MAIL_PASSWORD: {bool(mail_password)}"
+            print(f"ERROR: {error_msg}")
+            flash('Email not configured. Please set up environment variables on Render.', 'error')
             return redirect(url_for('dashboard'))
         
         # Send test notification
+        print("DEBUG: Attempting to send notifications...")
         check_and_send_notifications(mail)
-        flash('Email notification test completed! Check your email and console for results.', 'success')
+        print("DEBUG: Notifications sent successfully!")
+        flash('Email notification test completed! Check your email and Render logs for results.', 'success')
         return redirect(url_for('dashboard'))
     except Exception as e:
-        flash(f'Error sending test notification: {str(e)}', 'error')
+        error_msg = f'Error sending test notification: {str(e)}'
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        flash(error_msg, 'error')
         return redirect(url_for('dashboard'))
+
 
 
 # ============================================================================
