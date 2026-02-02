@@ -185,6 +185,25 @@ def edit_profile():
         return redirect(url_for('profile'))
 
 
+@app.route('/test-notifications')
+@login_required
+def test_notifications():
+    """Test email notifications manually"""
+    try:
+        # Check if email is configured
+        if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+            flash('Email not configured. Please set up your .env file with MAIL_USERNAME and MAIL_PASSWORD', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Send test notification
+        check_and_send_notifications(mail)
+        flash('Email notification test completed! Check your email and console for results.', 'success')
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        flash(f'Error sending test notification: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+
 # ============================================================================
 # DASHBOARD ROUTES
 # ============================================================================
