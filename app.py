@@ -49,17 +49,18 @@ def load_user(user_id):
 # ASYNC EMAIL HELPER
 # ============================================================================
 
-def send_async_email(app, mail_instance, user, tasks):
+def send_async_email(flask_app, mail_instance, user_email, user_name, tasks):
     """Send email in background thread to avoid blocking"""
-    with app.app_context():
+    with flask_app.app_context():
         try:
-            from notifications import send_notification_email
-            send_notification_email(mail_instance, user, tasks)
-            print(f"✓ Email sent successfully to {user.email}")
+            from notifications import send_notification_email_direct
+            send_notification_email_direct(mail_instance, user_email, user_name, tasks)
+            print(f"✓ Email sent successfully to {user_email}")
         except Exception as e:
             print(f"✗ Email sending failed: {str(e)}")
             import traceback
             traceback.print_exc()
+
 
 
 
@@ -242,7 +243,7 @@ def test_notifications():
         print(f"DEBUG: Sending email for {len(tasks_due_tomorrow)} task(s) in background thread...")
         thr = Thread(
             target=send_async_email,
-            args=[app._get_current_object(), mail, current_user, tasks_due_tomorrow]
+            args=[app, mail, current_user.email, current_user.username, tasks_due_tomorrow]
         )
         thr.start()
         
